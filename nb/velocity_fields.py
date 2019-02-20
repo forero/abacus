@@ -117,7 +117,7 @@ def smooth_data(path, L_cell=10.0, sigma_cut=300.0, sigma_smooth=1.0, L_box=1100
     print("Done writing divergence")
 
     
-full_computation = True
+full_computation = False
 
 if full_computation:
     path = "../data/AbacusCosmos_1100box_00_FoF_halos_z0.300/"
