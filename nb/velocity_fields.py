@@ -7,11 +7,11 @@ import os
 from collections import Counter
 import scipy.ndimage as scpimg
 
-def smooth_data(path, L_cell=10.0, sigma_cut=300.0, sigma_smooth=1.0, L_box=1100.0):
+def smooth_data(path, L_cell=10.0, sigma_cut=300.0, sigma_smooth=1.0, L_box=720.0):
     output_path = os.path.join(path, "fields")
-    halo_data = ach.read_halos_FoF(path)
-    halo_table = Table(halo_data)
-    sigma_v = halo_data['vcirc_max']
+    halo_data = ach.read_halos_Rockstar(path)
+#    halo_table = Table(halo_data)
+    sigma_v = halo_data['vmax']
     print("Done reading data")
 
     N_side = np.int(L_box/L_cell)
@@ -19,15 +19,15 @@ def smooth_data(path, L_cell=10.0, sigma_cut=300.0, sigma_smooth=1.0, L_box=1100
     ii = (sigma_v>sigma_cut)
     pos_cut = halo_data['pos'][ii]
     vel_cut = halo_data['vel'][ii]
-    min_pos = -L_box/2.0
+#    min_pos = -L_box/2.0
 
     print(L_box, L_cell, N_side, len(pos_cut))
     print("Done selection by sigma")
 
     # Set the coordinate origin to 0.0
-    pos_cut[:,0] = pos_cut[:,0] - min_pos
-    pos_cut[:,1] = pos_cut[:,1] - min_pos
-    pos_cut[:,2] = pos_cut[:,2] - min_pos
+#    pos_cut[:,0] = pos_cut[:,0] - min_pos
+#    pos_cut[:,1] = pos_cut[:,1] - min_pos
+#    pos_cut[:,2] = pos_cut[:,2] - min_pos
     #Nearest Grid Point interpolation
     ii = np.int_(pos_cut[:,0]/L_cell)
     jj = np.int_(pos_cut[:,1]/L_cell)
@@ -120,7 +120,8 @@ def smooth_data(path, L_cell=10.0, sigma_cut=300.0, sigma_smooth=1.0, L_box=1100
 full_computation = False
 
 if full_computation:
-    path = "../data/AbacusCosmos_1100box_00_FoF_halos_z0.300/"
-    for L_cell, sigma_smooth in zip([10.0, 5.0, 2.5], [1.0, 2.0, 4.0]):
+    path = "../data/AbacusCosmos_720box_planck_00_0_rockstar_halos/z0.1/"
+    L_cell = 2.0
+    for sigma_smooth in [1.0, 2.0, 4.0]:
         for sigma_cut in [200.0, 300.0, 400.0]:
             smooth_data(path, L_cell=L_cell, sigma_cut=sigma_cut, sigma_smooth=sigma_smooth)
