@@ -50,6 +50,7 @@ def find_watershed(divergence_filename):
 compute_all = True
 
 if compute_all:
-    div_files = glob.glob("../data/AbacusCosmos_1100box_00_FoF_halos_z0.300/fields/div_*.npy")
+    div_files = glob.glob("../data/AbacusCosmos_720box_planck_00_0_rockstar_halos/z0.1/fields/div_*.npy")
+    print(div_files)
     for div_file in div_files:
         find_watershed(div_file)
