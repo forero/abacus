@@ -6,29 +6,25 @@ import glob
 import os
 from collections import Counter
 import scipy.ndimage as scpimg
+import h5py
 
-def smooth_data(path, L_cell=10.0, sigma_cut=300.0, sigma_smooth=1.0, L_box=720.0):
-    output_path = os.path.join(path, "fields")
-    halo_data = ach.read_halos_Rockstar(path)
-#    halo_table = Table(halo_data)
-    sigma_v = halo_data['vmax']
-    print("Done reading data")
-
+def smooth_data(path, L_cell=10.0, vmax_cut=300.0, sigma_smooth=1.0, L_box=720.0):
     N_side = np.int(L_box/L_cell)
+    print(L_box, L_cell, N_side)
+    output_path = os.path.join(path, "fields")
+    output_name = "AbacusCosmos_720box_planck_00_0_rockstar"
+    output_filename = os.path.join(output_path, "velocity_{}_vmax_{}_sigma_{:.1f}_nside_{}.hdf5".format(output_name, vmax_cut, sigma_smooth, N_side))
 
-    ii = (sigma_v>sigma_cut)
+    halo_data = ach.read_halos_Rockstar(path)
+    print("Done reading data")
+ 
+    vmax = halo_data['vmax']
+    ii = (vmax>vmax_cut)
     pos_cut = halo_data['pos'][ii]
     vel_cut = halo_data['vel'][ii]
-#    min_pos = -L_box/2.0
+    print("Done selecting data by vmax")
 
-    print(L_box, L_cell, N_side, len(pos_cut))
-    print("Done selection by sigma")
-
-    # Set the coordinate origin to 0.0
-#    pos_cut[:,0] = pos_cut[:,0] - min_pos
-#    pos_cut[:,1] = pos_cut[:,1] - min_pos
-#    pos_cut[:,2] = pos_cut[:,2] - min_pos
-    #Nearest Grid Point interpolation
+    N_side = np.int(L_box/L_cell)
     ii = np.int_(pos_cut[:,0]/L_cell)
     jj = np.int_(pos_cut[:,1]/L_cell)
     kk = np.int_(pos_cut[:,2]/L_cell)
@@ -61,67 +57,34 @@ def smooth_data(path, L_cell=10.0, sigma_cut=300.0, sigma_smooth=1.0, L_box=720.
     vel_z_grid[zz] = vel_z_grid[zz]/n_grid[zz]
 
     print("Done NGP interpolation")
-
-    field = "vel_x_NGP"
-    filename = "{}_box_{:.1f}_sigmacut_{:.1f}_cell_{:.1f}.npy".format(field, L_box, sigma_cut, L_cell)
-    np.save(os.path.join(output_path, filename), vel_x_grid)
-    field = "vel_y_NGP"
-    filename = "{}_box_{:.1f}_sigmacut_{:.1f}_cell_{:.1f}.npy".format(field, L_box, sigma_cut, L_cell)
-    np.save(os.path.join(output_path, filename), vel_y_grid)
-    field = "vel_z_NGP"
-    filename = "{}_box_{:.1f}_sigmacut_{:.1f}_cell_{:.1f}.npy".format(field, L_box, sigma_cut, L_cell)
-    np.save(os.path.join(output_path, filename), vel_z_grid)
-    print("Done writing NGP velocities")
-
+    
     vel_x_grid_smooth = scpimg.filters.gaussian_filter(vel_x_grid,sigma_smooth)
     vel_y_grid_smooth = scpimg.filters.gaussian_filter(vel_y_grid,sigma_smooth)
     vel_z_grid_smooth = scpimg.filters.gaussian_filter(vel_z_grid,sigma_smooth)
     print("Done Gaussian Smoothing")
-
-
-    field = "vel_x_gauss"
-    filename = "{}_box_{:.1f}_sigmacut_{:.1f}_cell_{:.1f}_smooth_{:.1f}.npy".format(field, L_box, sigma_cut, L_cell, sigma_smooth)
-    np.save(os.path.join(output_path, filename), vel_x_grid_smooth)
-    field = "vel_y_gauss"
-    filename = "{}_box_{:.1f}_sigmacut_{:.1f}_cell_{:.1f}_smooth_{:.1f}.npy".format(field, L_box, sigma_cut, L_cell, sigma_smooth)
-    np.save(os.path.join(output_path, filename), vel_y_grid_smooth)
-    field = "vel_z_gauss"
-    filename = "{}_box_{:.1f}_sigmacut_{:.1f}_cell_{:.1f}_smooth_{:.1f}.npy".format(field, L_box, sigma_cut, L_cell, sigma_smooth)
-    np.save(os.path.join(output_path, filename), vel_z_grid_smooth)
-
-    print("Done writing gaussian velocities")
-
-
-    div_x = np.zeros(np.shape(vel_x_grid_smooth))
-    div_x[1:-1,:,:] = (vel_x_grid_smooth[2:,:,:] - vel_x_grid_smooth[:-2,:,:])/(2.0*L_cell)
-    div_x[0,:,:] = (vel_x_grid_smooth[1,:,:] - vel_x_grid_smooth[-1,:,:])/(2.0*L_cell)
-    div_x[-1,:,:] = (vel_x_grid_smooth[0,:,:] - vel_x_grid_smooth[-2,:,:])/(2.0*L_cell)
-
-    div_y = np.zeros(np.shape(vel_y_grid_smooth))
-    div_y[:,1:-1,:] = (vel_y_grid_smooth[:,2:,:] - vel_y_grid_smooth[:,:-2,:])/(2.0*L_cell)
-    div_y[:,0,:] = (vel_y_grid_smooth[:,1,:] - vel_y_grid_smooth[:,-1,:])/(2.0*L_cell)
-    div_y[:,-1,:] = (vel_y_grid_smooth[:,0,:] - vel_y_grid_smooth[:,-2,:])/(2.0*L_cell)
     
-    div_z = np.zeros(np.shape(vel_z_grid_smooth))
-    div_z[:,:,1:-1] = (vel_z_grid_smooth[:,:,2:] - vel_z_grid_smooth[:,:,:-2])/(2.0*L_cell)
-    div_z[:,:,0] = (vel_z_grid_smooth[:,:,1] - vel_z_grid_smooth[:,:,-1])/(2.0*L_cell)
-    div_z[:,:,-1] = (vel_z_grid_smooth[:,:,0] - vel_z_grid_smooth[:,:,-2])/(2.0*L_cell)
+    vel_x_grid_smooth_dx = scpimg.filters.correlate1d(vel_x_grid_smooth, [-1,0,1], axis=0, mode='wrap') * (1.0/(2.0*L_cell))
+    vel_y_grid_smooth_dy = scpimg.filters.correlate1d(vel_y_grid_smooth, [-1,0,1], axis=1, mode='wrap') * (1.0/(2.0*L_cell))
+    vel_z_grid_smooth_dz = scpimg.filters.correlate1d(vel_z_grid_smooth, [-1,0,1], axis=2, mode='wrap') * (1.0/(2.0*L_cell))
+    divergence = vel_x_grid_smooth_dx + vel_y_grid_smooth_dy + vel_z_grid_smooth_dz
+    print("Finished Divergence")
 
-    div = div_x + div_y + div_z
-
-    print("Done Divergence Computation")
-
-    field = "div"
-    filename = "{}_box_{:.1f}_sigmacut_{:.1f}_cell_{:.1f}_smooth_{:.1f}.npy".format(field, L_box, sigma_cut, L_cell, sigma_smooth)
-    np.save(os.path.join(output_path, filename), div)
-    print("Done writing divergence")
-
+    output_path = os.path.join(path, "fields")
+    output_name = "AbacusCosmos_720box_planck_00_0_rockstar"
+    output_filename = os.path.join(output_path, "velocity_{}_vmax_{}_sigma_{:.1f}_nside_{}.hdf5".format(output_name, vmax_cut, sigma_smooth, N_side))
     
-full_computation = False
+    h5f = h5py.File(output_filename, 'w')
+    h5f.create_dataset('vel_x', data=vel_x_grid_smooth)
+    h5f.create_dataset('vel_y', data=vel_y_grid_smooth)
+    h5f.create_dataset('vel_z', data=vel_z_grid_smooth)
+    h5f.create_dataset('divergence', data=divergence)
+    h5f.close()
+    print("Finished writing to {}".format(output_filename))
 
+full_computation = True
 if full_computation:
     path = "../data/AbacusCosmos_720box_planck_00_0_rockstar_halos/z0.1/"
     L_cell = 2.0
     for sigma_smooth in [1.0, 2.0, 4.0]:
-        for sigma_cut in [200.0, 300.0, 400.0]:
-            smooth_data(path, L_cell=L_cell, sigma_cut=sigma_cut, sigma_smooth=sigma_smooth)
+        for vmax_cut in [200.0, 300.0, 400.0]:
+            smooth_data(path, L_cell=L_cell, vmax_cut=vmax_cut, sigma_smooth=sigma_smooth)
