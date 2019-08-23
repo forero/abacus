@@ -12,16 +12,16 @@ def smooth_data(path, L_cell=10.0, vmax_cut=300.0, sigma_smooth=1.0, L_box=720.0
     N_side = np.int(L_box/L_cell)
     print(L_box, L_cell, N_side)
     output_path = os.path.join(path, "fields")
-    output_name = "AbacusCosmos_720box_planck_00_0_rockstar"
+    output_name = "AbacusCosmos_720box_planck_00_0_FoF"
     output_filename = os.path.join(output_path, "velocity_{}_vmax_{}_sigma_{:.1f}_nside_{}.hdf5".format(output_name, vmax_cut, sigma_smooth, N_side))
 
-    halo_data = ach.read_halos_Rockstar(path)
+    halo_data = ach.read_halos_FoF(path)
     print("Done reading data")
  
-    vmax = halo_data['vmax']
+    vmax = halo_data['vcirc_max']
     ii = (vmax>vmax_cut)
-    pos_cut = halo_data['pos'][ii]
-    vel_cut = halo_data['vel'][ii]
+    pos_cut = halo_data['pos'][ii]+L_box*0.5
+    vel_cut = halo_data['vel'][ii]+L_box*0.5
     print("Done selecting data by vmax")
 
     N_side = np.int(L_box/L_cell)
@@ -70,7 +70,6 @@ def smooth_data(path, L_cell=10.0, vmax_cut=300.0, sigma_smooth=1.0, L_box=720.0
     print("Finished Divergence")
 
     output_path = os.path.join(path, "fields")
-    output_name = "AbacusCosmos_720box_planck_00_0_rockstar"
     output_filename = os.path.join(output_path, "velocity_{}_vmax_{}_sigma_{:.1f}_nside_{}.hdf5".format(output_name, vmax_cut, sigma_smooth, N_side))
     
     h5f = h5py.File(output_filename, 'w')
@@ -83,8 +82,8 @@ def smooth_data(path, L_cell=10.0, vmax_cut=300.0, sigma_smooth=1.0, L_box=720.0
 
 full_computation = True
 if full_computation:
-    path = "../data/AbacusCosmos_720box_planck_00_0_rockstar_halos/z0.1/"
+    path = "/Users/forero/data/AbacusCosmos/AbacusCosmos_720box_planck_00_00_FoF_halos_z0.100/"
     L_cell = 2.0
-    for sigma_smooth in [1.0, 2.0, 4.0]:
-        for vmax_cut in [200.0, 300.0, 400.0]:
+    for sigma_smooth in [1.0]:
+        for vmax_cut in [300.0]:
             smooth_data(path, L_cell=L_cell, vmax_cut=vmax_cut, sigma_smooth=sigma_smooth)
